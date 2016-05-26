@@ -1,0 +1,122 @@
+<link rel="import" href="/bower_components/polymer/polymer.html">
+<link rel="import" href="/bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="/bower_components/mat-toast/mat-toast.html">
+<link rel="import" href="/bower_components/iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="/bower_components/paper-button/paper-button.html">
+<link rel="import" href="/bower_components/paper-material/paper-material.html">
+<script src="/js/superagent.js"></script>
+<dom-module id="x-message">
+    <template>
+<style is="custom-style">
+img{ margin: 0 auto; max-width: 100%; display: block; }
+paper-card{ margin: 5px 0px; width:100%; display:block; }
+pre{ white-space: pre-wrap; }
+paper-button a:link{color:white;text-decoration: none;}
+paper-button a:hover{color:white;text-decoration: none;}
+paper-button a:visited{color:white;text-decoration: none;}
+paper-button.indigo {
+    background-color: var(--paper-indigo-500);
+    color: white;
+    --paper-button-raised-keyboard-focus: {
+      background-color: var(--paper-pink-a200) !important;
+      color: white !important;
+    };
+}
+</style>
+        <template is="dom-repeat" items="{{items}}" as="v">
+<paper-material style="margin: 0 auto;" elevation="5">
+        <paper-card heading="{{v.created_at}}" style="max-width:100%;margin: 5px auto;">
+        <div class="card-content" style="max-width:100%;">
+            <p><pre>{{v.Content}}</pre></p>
+            <!--<a href="{{makePicUrl(v)}}" target="_blank"><img style="max-width:100%;" src="{{makePicUrl(v)}}" /></a>-->
+            <img style="max-width:100%;" src="{{makePicUrl(v)}}" />
+        </div>
+        </paper-card>
+</paper-material>
+        </template>
+        <br/>
+        <br/>
+        <!--<paper-button raised on-click="prev">上一页</paper-button>-->
+        <paper-button raised on-click="next">更多</paper-button>
+
+        <iron-ajax
+        id="httpMsgs"
+        method="GET"
+        with-credentials
+        on-error="handleError"
+        on-response="handleMsgs"></iron-ajax>
+
+        <mat-toast id="hi" label=""></mat-toast>
+    </template>
+    <script>
+        var R = require("superagent");
+        Polymer({
+            is: "x-message",
+            properties: { 
+                q: {
+                    type: Object,
+                    value: {},
+                    notify: true,
+                    reflectToAttribute: true
+                }
+            },
+            ready: function(){
+                this.items = [];
+                this.page = 1;
+                this.count = 10;
+                this.$.httpMsgs.url = "https://writing.txthinking.com/public/bu_wu_liao/message";
+                this.$.httpMsgs.params = this.q;
+                this.$.httpMsgs.params.page = this.page;
+                this.$.httpMsgs.params.count = this.count;
+                this.$.httpMsgs.generateRequest();
+            },
+            prev: function(){
+                if(this.page === 1){
+                    this.$.hi.label = '没有上一页了';
+                    this.$.hi.show();
+                    return;
+                }
+                this.page = this.page - 1;
+                this.$.httpMsgs.params.page = this.page;
+                this.$.httpMsgs.params.count = this.count;
+                this.$.httpMsgs.generateRequest();
+            },
+            next: function(){
+                this.page = this.page + 1;
+                this.$.httpMsgs.params.page = this.page;
+                this.$.httpMsgs.params.count = this.count;
+                this.$.httpMsgs.generateRequest();
+            },
+            handleMsgs: function(e){
+                var r = e.detail.response;
+                if(r.error !== null){
+                    this.$.hi.label = r.error;
+                    this.$.hi.show();
+                    return;
+                }
+                r = r.result;
+                if(r.length === 0){
+                    this.$.hi.label = '没有了';
+                    this.$.hi.show();
+                    if(this.page > 1){
+                        this.page = this.page - 1;
+                    }
+                    return;
+                }
+                this.items = this.items.concat(r);
+            },
+            handleError: function(e){
+                if(e.detail.request.status === 401){
+                    return;
+                }
+                alert(e.detail.error.message);
+            },
+            makePicUrl: function(o){
+                if(o.MsgType !== 'image'){
+                    return '';
+                }
+                return o.PicUrl;
+            }
+        });
+    </script>
+</dom-module>
